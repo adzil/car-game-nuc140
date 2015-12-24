@@ -9,8 +9,14 @@
 
 #define PLL_CLOCK           50000000
 
-
 fsm_t fsm;
+uint8_t buzzer;
+
+osMutexDef(mutexBuzzer);
+osMutexId mid_buzzer;
+
+osThreadId tid_fsmTask;
+osThreadId tid_buzzerTask;
 
 
 void SYS_Init(void) {
@@ -38,6 +44,69 @@ void SYS_Init(void) {
     
 }
 
+void buzzerTask (void const *arg) {
+    uint8_t val;
+    
+    while(1) {
+        osMutexWait(mid_buzzer, 0);
+        val = buzzer;
+        osMutexRelease(mid_buzzer);
+        
+        if (val) {
+            if (val == 1) {
+                DrvGPIO_ClrBit(E_GPB, 11);
+                osDelay(10);
+                DrvGPIO_SetBit(E_GPB, 11);
+            } else if (val == 2) {
+                DrvGPIO_ClrBit(E_GPB, 11);
+                osDelay(250);
+                DrvGPIO_SetBit(E_GPB, 11);
+                osDelay(100);
+                DrvGPIO_ClrBit(E_GPB, 11);
+                osDelay(250);
+                DrvGPIO_SetBit(E_GPB, 11);
+                osDelay(100);
+                DrvGPIO_ClrBit(E_GPB, 11);
+                osDelay(250);
+                DrvGPIO_SetBit(E_GPB, 11);
+                osDelay(100);
+                DrvGPIO_SetBit(E_GPB, 11);
+            }
+            
+            osMutexWait(mid_buzzer, 0);
+            buzzer = 0;
+            osMutexRelease(mid_buzzer);
+        }
+        
+        osDelay(20);
+    }
+}
+
+osThreadDef(buzzerTask, osPriorityNormal, 1, 0);
+
+void fsmTask (void const *arg) {
+    uint8_t val;
+    
+    FSM_init(&fsm);
+    
+    while(1) {
+        FSM_input(&fsm);
+        val = FSM_process(&fsm);
+        
+        if (val) {
+            osMutexWait(mid_buzzer, 0);
+            buzzer = val;
+            osMutexRelease(mid_buzzer);
+        }
+        
+        FSM_output(&fsm);
+    
+        osSignalWait(0x1, 100);
+    }
+}
+
+osThreadDef(fsmTask, osPriorityNormal, 1, 0);
+
 int main() {
     /* Init System, peripheral clock and multi-function I/O */
     SYS_UnlockReg();
@@ -53,15 +122,20 @@ int main() {
     
     init_LCD();
     clear_LCD();
-    FSM_init(&fsm);
+    
+    mid_buzzer = osMutexCreate(osMutex(mutexBuzzer));
+    
+    tid_fsmTask = osThreadCreate(osThread(fsmTask), NULL);
+    tid_buzzerTask = osThreadCreate(osThread(buzzerTask), NULL);
     
     /* Main loop */
     while (1) {
-        FSM_input(&fsm);
-        FSM_process(&fsm);
-        FSM_output(&fsm);
+        //FSM_input(&fsm);
+        //FSM_process(&fsm);
+        //FSM_output(&fsm);
         
-        osDelay(5);
+        osDelay(6);
+        osSignalSet(tid_fsmTask, 0x1);
         
         /*
         osDelay(500);

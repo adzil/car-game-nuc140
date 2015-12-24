@@ -60,7 +60,7 @@ typedef struct {
 void FSM_init(fsm_t *fsm);
 void FSM_isPressed(fsm_input_t *ret, fsm_t *fsm);
 void FSM_input(fsm_t *fsm);
-void FSM_process(fsm_t *fsm);
+uint8_t FSM_process(fsm_t *fsm);
 void FSM_output(fsm_t *fsm);
 
 #endif /* __FSM_H__ */

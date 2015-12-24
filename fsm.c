@@ -29,7 +29,7 @@ void FSM_isPressed(fsm_input_t *ret, fsm_t *fsm) {
     ret->u8button &= fsm->input.u8button;
 }
 
-void FSM_process(fsm_t *fsm) {
+uint8_t FSM_process(fsm_t *fsm) {
     int n;
     uint8_t newlane, isPass;
     fsm_input_t input;
@@ -82,6 +82,7 @@ void FSM_process(fsm_t *fsm) {
         if (fsm->output.obstaclepos[fsm->output.carpos] & 3) {
             // Car crashed, show game over
             fsm->state = FSM_GAME_OVER;
+            return 2;
         }
         
         if (input.button.up) {
@@ -99,6 +100,12 @@ void FSM_process(fsm_t *fsm) {
     } else {
         fsm->state = FSM_IDLE;
     }
+    
+    if (input.button.up || input.button.down) {
+        return 1;
+    }
+    
+    return 0;
 }
 
 
